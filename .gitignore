@@ -1,0 +1,77 @@
+# ===== Backend (Maven / Java) =====
+backend/target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+.mtj.tmp/
+*.factorypath
+.apt_generated/
+.classpath
+.project
+.settings/
+bin/
+out/
+build/
+
+# Local Spring overrides (keep secrets out of git)
+**/application-local.yml
+**/application-local.yaml
+**/application-*.local.yml
+**/application-*.local.yaml
+
+# ===== Frontend (Node / Vite) =====
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/coverage/
+*.local
+
+# ===== IDE =====
+.idea/
+**/.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ===== OS =====
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ===== Env / secrets / logs =====
+.env
+.env.*
+!.env.example
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===== Misc =====
+*.tmp
+*.temp
+*.bak
+*.orig
+*~
+.cursor/
+.agents/
