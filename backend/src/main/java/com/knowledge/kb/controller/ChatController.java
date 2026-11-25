@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,12 +30,14 @@ public class ChatController {
 
     @Operation(summary = "SSE 流式问答")
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PreAuthorize("hasAuthority('kb:chat:ask')")
     public SseEmitter stream(@Valid @RequestBody ChatRequest request) {
         return chatService.stream(request.getQuestion(), request.getSessionId());
     }
 
     @Operation(summary = "会话消息列表")
     @GetMapping("/sessions/{sessionId}/messages")
+    @PreAuthorize("hasAuthority('kb:chat:ask')")
     public ApiResponse<List<ChatMessageVO>> messages(@PathVariable Long sessionId) {
         return ApiResponse.ok(chatService.listMessages(sessionId));
     }

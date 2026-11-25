@@ -17,6 +17,8 @@ import com.knowledge.kb.mapper.KbChatMessageMapper;
 import com.knowledge.kb.mapper.KbChatSessionMapper;
 import com.knowledge.kb.mapper.KbChunkMapper;
 import com.knowledge.kb.mapper.KbDocumentMapper;
+import com.knowledge.kb.security.SecurityUtils;
+import com.knowledge.kb.security.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -45,10 +47,18 @@ public class ChatService {
     private final KbChatSessionMapper sessionMapper;
     private final KbChatMessageMapper messageMapper;
     private final ObjectMapper objectMapper;
+    private final KbSpaceService kbSpaceService;
+    private final AuditService auditService;
 
     private final ExecutorService sseExecutor = Executors.newCachedThreadPool();
 
     public SseEmitter stream(String question, Long sessionId) {
+        Long tenantId = TenantContext.requireTenantId();
+        Long kbId = TenantContext.requireKbId();
+        Long userId = SecurityUtils.currentUserId();
+        kbSpaceService.assertKbAccess(kbId);
+        auditService.record("CHAT_ASK", "CHAT", null, true, Map.of("question", question, "kbId", kbId));
+
         SseEmitter emitter = new SseEmitter(0L);
         sseExecutor.execute(() -> {
             StringBuilder answer = new StringBuilder();
@@ -56,13 +66,20 @@ public class ChatService {
             try {
                 if (sid == null) {
                     KbChatSession session = new KbChatSession();
+                    session.setTenantId(tenantId);
+                    session.setKbId(kbId);
+                    session.setUserId(userId);
                     session.setTitle(question.length() > 40 ? question.substring(0, 40) : question);
                     session.setCreatedAt(LocalDateTime.now());
                     session.setUpdatedAt(LocalDateTime.now());
                     sessionMapper.insert(session);
                     sid = session.getId();
-                } else if (sessionMapper.selectById(sid) == null) {
-                    throw new BizException("会话不存在");
+                } else {
+                    KbChatSession existing = sessionMapper.selectById(sid);
+                    if (existing == null || !tenantId.equals(existing.getTenantId())
+                            || !kbId.equals(existing.getKbId()) || !userId.equals(existing.getUserId())) {
+                        throw new BizException("会话不存在");
+                    }
                 }
 
                 saveMessage(sid, "user", question, null);
@@ -70,7 +87,7 @@ public class ChatService {
 
                 List<Float> embedding = ollamaClient.embed(question);
                 int topK = etcdConfigService.getTopK();
-                List<MilvusService.SearchHit> hits = milvusService.search(embedding, topK);
+                List<MilvusService.SearchHit> hits = milvusService.search(embedding, topK, tenantId, kbId);
                 List<CitationVO> citations = buildCitations(hits);
 
                 sendEvent(emitter, "meta", Map.of("citations", citations, "sessionId", sid));
@@ -107,7 +124,13 @@ public class ChatService {
     }
 
     public List<ChatMessageVO> listMessages(Long sessionId) {
-        if (sessionMapper.selectById(sessionId) == null) {
+        Long tenantId = TenantContext.requireTenantId();
+        Long kbId = TenantContext.requireKbId();
+        Long userId = SecurityUtils.currentUserId();
+        kbSpaceService.assertKbAccess(kbId);
+        KbChatSession session = sessionMapper.selectById(sessionId);
+        if (session == null || !tenantId.equals(session.getTenantId())
+                || !kbId.equals(session.getKbId()) || !userId.equals(session.getUserId())) {
             throw new BizException("会话不存在");
         }
         List<KbChatMessage> messages = messageMapper.selectList(new LambdaQueryWrapper<KbChatMessage>()

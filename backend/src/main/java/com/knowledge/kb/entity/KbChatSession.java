@@ -10,9 +10,11 @@ import java.time.LocalDateTime;
 @Data
 @TableName("kb_chat_session")
 public class KbChatSession {
-
     @TableId(type = IdType.AUTO)
     private Long id;
+    private Long tenantId;
+    private Long kbId;
+    private Long userId;
     private String title;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

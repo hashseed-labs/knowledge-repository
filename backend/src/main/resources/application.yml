@@ -44,6 +44,16 @@ knife4j:
 kb:
   cors:
     allowed-origins: http://localhost:5173,http://127.0.0.1:5173
+  jwt:
+    secret: ${KB_JWT_SECRET:knowledge-repository-dev-secret-change-me-32bytes}
+    access-token-ttl-minutes: 120
+    refresh-token-ttl-days: 7
+  seed:
+    enabled: true
+    admin-username: admin
+    admin-password: admin123
+    tenant-code: default
+    tenant-name: 默认组织
   minio:
     endpoint: http://127.0.0.1:9000
     access-key: minioadmin
@@ -52,7 +62,7 @@ kb:
   milvus:
     host: localhost
     port: 19530
-    collection: kb_chunks
+    collection: kb_chunks_rbac
     # bge-small-zh-v1.5 via Ollama typically returns 512-dim vectors
     dimension: 512
     top-k: 5

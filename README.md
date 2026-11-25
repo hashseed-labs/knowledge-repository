@@ -1,42 +1,38 @@
-# Knowledge Repository（企业知识库问答 MVP）
+# Knowledge Repository（企业知识库问答）
 
-前后端分离的 Markdown 知识库问答系统：文档上传 → MinIO 存储 → 分块/向量化 → Milvus → Ollama RAG 流式问答。
+前后端分离的企业级 Markdown 知识库问答系统，支持 **JWT 登录、多租户、自定义 RBAC、知识库隔离、操作审计**。
 
 ## 技术栈
 
-- **后端**：JDK 21、Spring Boot 3、MySQL、MyBatis-Plus、Druid、Milvus、Ollama、MinIO、Etcd、Knife4j
+- **后端**：JDK 21、Spring Boot 3、Spring Security、JWT、MySQL、MyBatis-Plus、Druid、Milvus、Ollama、MinIO、Etcd、Knife4j
 - **前端**：Vue 3、Vite、Element Plus、Axios、Pinia、Vue Router、markdown-it、SSE
 
 ## 快速启动
 
-### 1. 启动基础设施
+### 1. 基础设施
 
 ```bash
 docker compose up -d
 ```
 
-服务端口：
-
 | 服务 | 端口 |
 |------|------|
 | MySQL | 3306（root/root，库 `knowledge_kb`） |
-| MinIO | 9000 API / 9001 Console（minioadmin/minioadmin） |
+| MinIO | 9000 / 9001（minioadmin/minioadmin） |
 | Etcd | 2379 |
 | Milvus | 19530 |
 | Ollama | 11434 |
 
-### 2. 拉取 Ollama 模型
+> 若库已存在旧 MVP 表，可执行 [`sql/schema_rbac.sql`](sql/schema_rbac.sql) 增量迁移；全新环境用 [`sql/schema.sql`](sql/schema.sql)。
+
+### 2. Ollama 模型
 
 ```bash
 docker exec -it kb-ollama ollama pull qllama/bge-small-zh-v1.5
 docker exec -it kb-ollama ollama pull qwen:7b
 ```
 
-> Embedding 默认模型名为 `qllama/bge-small-zh-v1.5:latest`（维度 **512**）。若你拉取的是官方名 `bge-small-zh-v1.5`，请同步修改 `kb.ollama.embed-model`。维度变化时需同步 `kb.milvus.dimension` 并重建 collection。
->
-> 若本机已有 MySQL(3306)/MinIO(9000)/Milvus(19530)/Ollama(11434) 在运行，可只启动缺失服务，或直接复用现有实例并改 `application.yml`。
-
-### 3. 启动后端
+### 3. 后端
 
 ```bash
 cd backend
@@ -45,12 +41,16 @@ mvn spring-boot:run
 
 - API: http://localhost:8088
 - Knife4j: http://localhost:8088/doc.html
-- Health: http://localhost:8088/api/health
+- Health: http://localhost:8088/api/health（匿名）
 
-> 若本机已有服务占用 8080，本项目默认使用 **8088**。可通过 `server.port` 修改。
-> Ollama embedding 模型名若为 `qllama/bge-small-zh-v1.5:latest`（常见社区镜像），请与 `kb.ollama.embed-model` 保持一致。
+启动后自动种子：
 
-### 4. 启动前端
+- 组织：`default`（默认组织）
+- 账号：`admin` / `admin123`
+- 角色：`TENANT_ADMIN` / `KB_MANAGER` / `EDITOR` / `VIEWER`
+- 知识库：默认知识库
+
+### 4. 前端
 
 ```bash
 cd frontend
@@ -58,54 +58,49 @@ npm install
 npm run dev
 ```
 
-打开 http://localhost:5173
+打开 http://localhost:5173 ，使用 `admin/admin123` 登录。
 
-## 使用流程
+## 权限点
 
-1. 在「文档管理」上传 `.md` 文件
-2. 等待状态变为 `READY`
-3. 在「知识问答」提问，答案以 SSE 流式渲染为 Markdown，并展示引用来源
+| code | 含义 |
+|------|------|
+| `tenant:user:manage` | 组织用户管理 |
+| `tenant:role:manage` | 角色权限管理 |
+| `tenant:audit:view` | 查看审计 |
+| `kb:space:manage` | 知识库管理 |
+| `kb:member:manage` | 知识库成员 |
+| `kb:doc:write` | 上传/删除文档 |
+| `kb:doc:read` | 查看文档 |
+| `kb:chat:ask` | 问答 |
 
-## 主要 API
+请求头：
 
-- `POST /api/documents/upload` 上传 Markdown
-- `GET /api/documents` 分页列表
-- `GET /api/documents/{id}` 详情
-- `DELETE /api/documents/{id}` 删除（同步清理 MySQL / MinIO / Milvus）
-- `POST /api/chat/stream` SSE 流式问答（事件：`session` / `meta` / `token` / `done` / `error`）
-- `GET /api/chat/sessions/{sessionId}/messages` 会话历史
-- `GET /api/health` 依赖探测
+- `Authorization: Bearer <accessToken>`
+- `X-Tenant-Id: <组织ID>`
+- `X-Kb-Id: <知识库ID>`（文档/问答类接口）
 
-## Etcd 动态配置（可选）
+## 主要能力
 
-前缀：`/kb/config`
+1. 登录 / 刷新令牌 / 退出
+2. 组织与知识库切换，数据按 `tenant_id + kb_id` 隔离
+3. 自定义角色与权限勾选
+4. 文档上传向量化、SSE 流式问答（含耗时与引用折叠）
+5. 审计日志查询
 
-| Key | 含义 | 默认 |
-|-----|------|------|
-| `/kb/config/topK` | 检索条数 | 5 |
-| `/kb/config/chunkSize` | 分块最大字符 | 600 |
-| `/kb/config/chunkOverlap` | 分块重叠 | 80 |
-| `/kb/config/temperature` | LLM 温度 | 0.2 |
-| `/kb/config/systemPrompt` | RAG 系统提示词 | application.yml |
-
-示例：
-
-```bash
-docker exec -it kb-etcd etcdctl put /kb/config/topK 8
-```
-
-## 目录结构
+## 目录
 
 ```
 knowledge-repository/
-├── backend/           # Spring Boot 单模块
-├── frontend/          # Vue3 + Vite
-├── sql/schema.sql     # MySQL 表结构
+├── backend/
+├── frontend/
+├── sql/schema.sql
+├── sql/schema_rbac.sql
 └── docker-compose.yml
 ```
 
 ## 常见问题
 
-1. **文档一直 PROCESSING/FAILED**：检查 Ollama 模型是否已拉取，以及 `/api/health` 中 `ollama`/`milvus`/`minio` 是否为 true。
-2. **Milvus 维度不匹配**：确认 embedding 维度与 `kb.milvus.dimension` 一致；不一致时删除 collection 或重建 Milvus 数据卷。
-3. **SSE 无输出**：确认前端走 Vite 代理 `/api`，且浏览器 Network 中响应类型为 `text/event-stream`。
+1. **401**：先登录；前端会自动跳转 `/login`。
+2. **403**：当前角色缺少权限点，或未加入知识库成员（非组织管理员）。
+3. **Milvus 维度/schema**：企业版使用 collection `kb_chunks_rbac`（含 tenant_id/kb_id）。
+4. **Etcd 异常**：不影响主流程，配置回退 `application.yml`。

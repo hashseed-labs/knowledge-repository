@@ -59,6 +59,8 @@ public class DocumentProcessService {
                 long milvusId = MILVUS_ID_SEQ.incrementAndGet();
 
                 KbChunk chunk = new KbChunk();
+                chunk.setTenantId(doc.getTenantId());
+                chunk.setKbId(doc.getKbId());
                 chunk.setDocId(docId);
                 chunk.setChunkIndex(index++);
                 chunk.setContent(chunkText);
@@ -67,7 +69,7 @@ public class DocumentProcessService {
                 chunk.setCreatedAt(LocalDateTime.now());
                 chunkMapper.insert(chunk);
 
-                milvusService.insert(milvusId, docId, chunk.getId(), embedding);
+                milvusService.insert(milvusId, doc.getTenantId(), doc.getKbId(), docId, chunk.getId(), embedding);
             }
             milvusService.flush();
 

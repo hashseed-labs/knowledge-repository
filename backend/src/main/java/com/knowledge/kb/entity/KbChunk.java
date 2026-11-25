@@ -10,9 +10,10 @@ import java.time.LocalDateTime;
 @Data
 @TableName("kb_chunk")
 public class KbChunk {
-
     @TableId(type = IdType.AUTO)
     private Long id;
+    private Long tenantId;
+    private Long kbId;
     private Long docId;
     private Integer chunkIndex;
     private String content;

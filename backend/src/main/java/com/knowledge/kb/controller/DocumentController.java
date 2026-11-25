@@ -7,6 +7,7 @@ import com.knowledge.kb.service.DocumentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,12 +27,14 @@ public class DocumentController {
 
     @Operation(summary = "上传 Markdown 文档")
     @PostMapping("/upload")
+    @PreAuthorize("hasAuthority('kb:doc:write')")
     public ApiResponse<DocumentVO> upload(@RequestParam("file") MultipartFile file) {
         return ApiResponse.ok(documentService.upload(file));
     }
 
     @Operation(summary = "分页查询文档")
     @GetMapping
+    @PreAuthorize("hasAuthority('kb:doc:read')")
     public ApiResponse<PageResult<DocumentVO>> page(
             @RequestParam(defaultValue = "1") long page,
             @RequestParam(defaultValue = "10") long size) {
@@ -40,12 +43,14 @@ public class DocumentController {
 
     @Operation(summary = "文档详情")
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('kb:doc:read')")
     public ApiResponse<DocumentVO> detail(@PathVariable Long id) {
         return ApiResponse.ok(documentService.detail(id));
     }
 
     @Operation(summary = "删除文档")
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('kb:doc:write')")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         documentService.delete(id);
         return ApiResponse.ok(null);

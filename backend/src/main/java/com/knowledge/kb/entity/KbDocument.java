@@ -10,9 +10,11 @@ import java.time.LocalDateTime;
 @Data
 @TableName("kb_document")
 public class KbDocument {
-
     @TableId(type = IdType.AUTO)
     private Long id;
+    private Long tenantId;
+    private Long kbId;
+    private Long createdBy;
     private String title;
     private String objectKey;
     private String status;

@@ -83,33 +83,15 @@ public class MilvusService {
         }
 
         int dim = kbProperties.getMilvus().getDimension();
-        FieldType idField = FieldType.newBuilder()
-                .withName("id")
-                .withDataType(DataType.Int64)
-                .withPrimaryKey(true)
-                .withAutoID(false)
-                .build();
-        FieldType docIdField = FieldType.newBuilder()
-                .withName("doc_id")
-                .withDataType(DataType.Int64)
-                .build();
-        FieldType chunkIdField = FieldType.newBuilder()
-                .withName("chunk_id")
-                .withDataType(DataType.Int64)
-                .build();
-        FieldType vectorField = FieldType.newBuilder()
-                .withName("embedding")
-                .withDataType(DataType.FloatVector)
-                .withDimension(dim)
-                .build();
-
         R<RpcStatus> create = client().createCollection(CreateCollectionParam.newBuilder()
                 .withCollectionName(collection)
-                .withDescription("Knowledge base chunks")
-                .addFieldType(idField)
-                .addFieldType(docIdField)
-                .addFieldType(chunkIdField)
-                .addFieldType(vectorField)
+                .withDescription("Knowledge base chunks with tenant isolation")
+                .addFieldType(FieldType.newBuilder().withName("id").withDataType(DataType.Int64).withPrimaryKey(true).withAutoID(false).build())
+                .addFieldType(FieldType.newBuilder().withName("tenant_id").withDataType(DataType.Int64).build())
+                .addFieldType(FieldType.newBuilder().withName("kb_id").withDataType(DataType.Int64).build())
+                .addFieldType(FieldType.newBuilder().withName("doc_id").withDataType(DataType.Int64).build())
+                .addFieldType(FieldType.newBuilder().withName("chunk_id").withDataType(DataType.Int64).build())
+                .addFieldType(FieldType.newBuilder().withName("embedding").withDataType(DataType.FloatVector).withDimension(dim).build())
                 .build());
         if (create.getStatus() != R.Status.Success.getCode()) {
             throw new BizException("创建 Milvus collection 失败: " + create.getMessage());
@@ -132,11 +114,13 @@ public class MilvusService {
         log.info("Milvus collection ready: {} dim={}", collection, dim);
     }
 
-    public void insert(long milvusId, long docId, long chunkId, List<Float> embedding) {
+    public void insert(long milvusId, long tenantId, long kbId, long docId, long chunkId, List<Float> embedding) {
         try {
             ensureCollection();
             List<InsertParam.Field> fields = new ArrayList<>();
             fields.add(new InsertParam.Field("id", Collections.singletonList(milvusId)));
+            fields.add(new InsertParam.Field("tenant_id", Collections.singletonList(tenantId)));
+            fields.add(new InsertParam.Field("kb_id", Collections.singletonList(kbId)));
             fields.add(new InsertParam.Field("doc_id", Collections.singletonList(docId)));
             fields.add(new InsertParam.Field("chunk_id", Collections.singletonList(chunkId)));
             fields.add(new InsertParam.Field("embedding", Collections.singletonList(embedding)));
@@ -161,16 +145,18 @@ public class MilvusService {
                 .build());
     }
 
-    public List<SearchHit> search(List<Float> embedding, int topK) {
+    public List<SearchHit> search(List<Float> embedding, int topK, long tenantId, long kbId) {
         try {
             ensureCollection();
+            String expr = "tenant_id == " + tenantId + " && kb_id == " + kbId;
             SearchParam searchParam = SearchParam.newBuilder()
                     .withCollectionName(kbProperties.getMilvus().getCollection())
                     .withMetricType(MetricType.COSINE)
-                    .withOutFields(List.of("id", "doc_id", "chunk_id"))
+                    .withOutFields(List.of("id", "tenant_id", "kb_id", "doc_id", "chunk_id"))
                     .withTopK(topK)
                     .withVectors(Collections.singletonList(embedding))
                     .withVectorFieldName("embedding")
+                    .withExpr(expr)
                     .withParams("{\"nprobe\":16}")
                     .build();
             R<SearchResults> response = client().search(searchParam);
@@ -204,10 +190,9 @@ public class MilvusService {
     public void deleteByDocId(long docId) {
         try {
             ensureCollection();
-            String expr = "doc_id == " + docId;
             R<MutationResult> result = client().delete(DeleteParam.newBuilder()
                     .withCollectionName(kbProperties.getMilvus().getCollection())
-                    .withExpr(expr)
+                    .withExpr("doc_id == " + docId)
                     .build());
             if (result.getStatus() != R.Status.Success.getCode()) {
                 throw new BizException("Milvus delete 失败: " + result.getMessage());

@@ -13,6 +13,8 @@ import java.util.List;
 public class KbProperties {
 
     private Cors cors = new Cors();
+    private Jwt jwt = new Jwt();
+    private Seed seed = new Seed();
     private Minio minio = new Minio();
     private Milvus milvus = new Milvus();
     private Ollama ollama = new Ollama();
@@ -23,6 +25,22 @@ public class KbProperties {
     @Data
     public static class Cors {
         private List<String> allowedOrigins = new ArrayList<>();
+    }
+
+    @Data
+    public static class Jwt {
+        private String secret;
+        private long accessTokenTtlMinutes = 120;
+        private long refreshTokenTtlDays = 7;
+    }
+
+    @Data
+    public static class Seed {
+        private boolean enabled = true;
+        private String adminUsername = "admin";
+        private String adminPassword = "admin123";
+        private String tenantCode = "default";
+        private String tenantName = "默认组织";
     }
 
     @Data
