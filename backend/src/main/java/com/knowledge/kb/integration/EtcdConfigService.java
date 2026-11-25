@@ -129,6 +129,9 @@ public class EtcdConfigService {
             } catch (NumberFormatException ignored) {
             }
         }
+        if ("dashscope".equalsIgnoreCase(kbProperties.getAi().getLlmProvider())) {
+            return kbProperties.getDashscope().getTemperature();
+        }
         return kbProperties.getOllama().getTemperature();
     }
 

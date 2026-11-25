@@ -7,7 +7,7 @@ import com.knowledge.kb.entity.KbDocument;
 import com.knowledge.kb.integration.EtcdConfigService;
 import com.knowledge.kb.integration.MilvusService;
 import com.knowledge.kb.integration.MinioService;
-import com.knowledge.kb.integration.OllamaClient;
+import com.knowledge.kb.integration.EmbeddingClient;
 import com.knowledge.kb.mapper.KbChunkMapper;
 import com.knowledge.kb.mapper.KbDocumentMapper;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public class DocumentProcessService {
     private final KbDocumentMapper documentMapper;
     private final KbChunkMapper chunkMapper;
     private final MinioService minioService;
-    private final OllamaClient ollamaClient;
+    private final EmbeddingClient embeddingClient;
     private final MilvusService milvusService;
     private final MarkdownChunker markdownChunker;
     private final EtcdConfigService etcdConfigService;
@@ -55,7 +55,7 @@ public class DocumentProcessService {
 
             int index = 0;
             for (String chunkText : chunks) {
-                List<Float> embedding = ollamaClient.embed(chunkText);
+                List<Float> embedding = embeddingClient.embed(chunkText);
                 long milvusId = MILVUS_ID_SEQ.incrementAndGet();
 
                 KbChunk chunk = new KbChunk();

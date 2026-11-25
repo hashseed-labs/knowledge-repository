@@ -12,7 +12,8 @@ import com.knowledge.kb.entity.KbChunk;
 import com.knowledge.kb.entity.KbDocument;
 import com.knowledge.kb.integration.EtcdConfigService;
 import com.knowledge.kb.integration.MilvusService;
-import com.knowledge.kb.integration.OllamaClient;
+import com.knowledge.kb.integration.EmbeddingClient;
+import com.knowledge.kb.integration.LlmClient;
 import com.knowledge.kb.mapper.KbChatMessageMapper;
 import com.knowledge.kb.mapper.KbChatSessionMapper;
 import com.knowledge.kb.mapper.KbChunkMapper;
@@ -39,7 +40,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ChatService {
 
-    private final OllamaClient ollamaClient;
+    private final EmbeddingClient embeddingClient;
+    private final LlmClient llmClient;
     private final MilvusService milvusService;
     private final EtcdConfigService etcdConfigService;
     private final KbChunkMapper chunkMapper;
@@ -85,7 +87,7 @@ public class ChatService {
                 saveMessage(sid, "user", question, null);
                 sendEvent(emitter, "session", Map.of("sessionId", sid));
 
-                List<Float> embedding = ollamaClient.embed(question);
+                List<Float> embedding = embeddingClient.embed(question);
                 int topK = etcdConfigService.getTopK();
                 List<MilvusService.SearchHit> hits = milvusService.search(embedding, topK, tenantId, kbId);
                 List<CitationVO> citations = buildCitations(hits);
@@ -95,7 +97,7 @@ public class ChatService {
                 String prompt = buildPrompt(question, citations);
                 Long finalSid = sid;
                 double temperature = etcdConfigService.getTemperature();
-                ollamaClient.generateStream(prompt, temperature, token -> {
+                llmClient.generateStream(prompt, temperature, token -> {
                     answer.append(token);
                     try {
                         sendEvent(emitter, "token", Map.of("content", token));

@@ -207,6 +207,9 @@ async function onSend() {
             if (data?.citations) msg.citations = data.citations
             msg.elapsedMs = Date.now() - startedAt
           })
+          // 后端已结束生成；即使 HTTP 流偶发未立刻关闭，也先结束「生成中」
+          store.streaming = false
+          stopTick()
         }
         if (event === 'error') {
           ElMessage.error(data?.message || '问答失败')
@@ -214,6 +217,8 @@ async function onSend() {
             if (!msg.content) msg.content = `错误: ${data?.message || '问答失败'}`
             msg.elapsedMs = Date.now() - startedAt
           })
+          store.streaming = false
+          stopTick()
         }
       },
     })

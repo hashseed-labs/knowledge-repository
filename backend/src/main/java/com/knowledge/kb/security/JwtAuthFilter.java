@@ -3,6 +3,7 @@ package com.knowledge.kb.security;
 import com.knowledge.kb.entity.SysUser;
 import com.knowledge.kb.mapper.SysUserMapper;
 import io.jsonwebtoken.Claims;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +24,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final SysUserMapper userMapper;
     private final PermissionService permissionService;
+
+    /**
+     * SSE / SseEmitter 会触发 ASYNC 二次分发；默认跳过 ASYNC 会导致收尾时无认证 → AccessDenied，
+     * 响应已提交后连接挂起，前端一直显示「生成中」。
+     */
+    @Override
+    protected boolean shouldNotFilterAsyncDispatch() {
+        return false;
+    }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -53,8 +63,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
             filterChain.doFilter(request, response);
         } finally {
-            TenantContext.clear();
-            SecurityContextHolder.clearContext();
+            // 请求线程已启动异步（SSE）时不要清掉上下文，留给 ASYNC 分发使用；ASYNC 结束时再清
+            if (request.getDispatcherType() == DispatcherType.ASYNC || !request.isAsyncStarted()) {
+                TenantContext.clear();
+                SecurityContextHolder.clearContext();
+            }
         }
     }
 }

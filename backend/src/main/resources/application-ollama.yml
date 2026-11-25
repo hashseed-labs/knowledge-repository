@@ -1,0 +1,17 @@
+# 激活方式：spring.profiles.active=ollama（默认）
+# 或环境变量 SPRING_PROFILES_ACTIVE=ollama
+kb:
+  milvus:
+    collection: kb_chunks_rbac
+    # bge-small-zh-v1.5 via Ollama => 512
+    dimension: 512
+  ai:
+    embedding-provider: ollama
+    llm-provider: ollama
+  ollama:
+    base-url: http://localhost:11434
+    embed-model: qllama/bge-small-zh-v1.5:latest
+    llm-model: qwen:7b
+    temperature: 0.2
+    connect-timeout-ms: 10000
+    read-timeout-ms: 300000

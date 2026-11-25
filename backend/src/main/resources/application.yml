@@ -4,6 +4,9 @@ server:
 spring:
   application:
     name: knowledge-repository
+  profiles:
+    # ollama | qwen
+    active: ${SPRING_PROFILES_ACTIVE:qwen}
   servlet:
     multipart:
       max-file-size: 20MB
@@ -62,17 +65,8 @@ kb:
   milvus:
     host: localhost
     port: 19530
-    collection: kb_chunks_rbac
-    # bge-small-zh-v1.5 via Ollama typically returns 512-dim vectors
-    dimension: 512
     top-k: 5
-  ollama:
-    base-url: http://localhost:11434
-    embed-model: qllama/bge-small-zh-v1.5:latest
-    llm-model: qwen:7b
-    temperature: 0.2
-    connect-timeout-ms: 10000
-    read-timeout-ms: 300000
+    # collection / dimension 由 profile（ollama | qwen）覆盖
   etcd:
     endpoints: http://127.0.0.1:2379
     config-prefix: /kb/config

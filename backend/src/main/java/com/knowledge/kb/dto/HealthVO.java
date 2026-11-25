@@ -10,4 +10,5 @@ import java.util.Map;
 public class HealthVO {
     private boolean healthy;
     private Map<String, Boolean> dependencies;
+    private Map<String, Object> meta;
 }

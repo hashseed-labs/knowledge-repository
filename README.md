@@ -4,7 +4,7 @@
 
 ## 技术栈
 
-- **后端**：JDK 21、Spring Boot 3、Spring Security、JWT、MySQL、MyBatis-Plus、Druid、Milvus、Ollama、MinIO、Etcd、Knife4j
+- **后端**：JDK 21、Spring Boot 3、Spring Security、JWT、MySQL、MyBatis-Plus、Druid、Milvus、Ollama / 阿里云百炼（DashScope）、MinIO、Etcd、Knife4j
 - **前端**：Vue 3、Vite、Element Plus、Axios、Pinia、Vue Router、markdown-it、SSE
 
 ## 快速启动
@@ -25,12 +25,40 @@ docker compose up -d
 
 > 若库已存在旧 MVP 表，可执行 [`sql/schema_rbac.sql`](sql/schema_rbac.sql) 增量迁移；全新环境用 [`sql/schema.sql`](sql/schema.sql)。
 
-### 2. Ollama 模型
+### 2. 模型 Profile（`ollama` / `qwen`）
+
+通过 `spring.profiles.active` 切换，默认 `ollama`。
+
+| Profile | 配置文件 | Embedding | LLM | Milvus |
+|---------|----------|-----------|-----|--------|
+| `ollama` | `application-ollama.yml` | bge-small-zh-v1.5 | qwen:7b | `kb_chunks_rbac` / 512 |
+| `qwen` | `application-qwen.yml` | qwen3.7-text-embedding | qwen3.7-plus | `kb_chunks_rbac_qwen` / 1024 |
+
+本地 Ollama 模型：
 
 ```bash
 docker exec -it kb-ollama ollama pull qllama/bge-small-zh-v1.5
 docker exec -it kb-ollama ollama pull qwen:7b
 ```
+
+启动示例：
+
+```bash
+# 默认 ollama
+mvn spring-boot:run
+
+# 百炼 Qwen（需 API Key）
+# PowerShell:
+$env:DASHSCOPE_API_KEY="sk-xxx"
+$env:SPRING_PROFILES_ACTIVE="qwen"
+mvn spring-boot:run
+
+# 或
+mvn spring-boot:run -Dspring-boot.run.arguments=--spring.profiles.active=qwen
+```
+
+> 切换 profile 会换 embedding 维度与 collection，需重建文档向量，勿混用旧向量库。
+> `qwen3.7-plus` 在 `application-qwen.yml` 中已设 `enable-thinking: false`。
 
 ### 3. 后端
 

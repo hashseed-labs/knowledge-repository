@@ -3,7 +3,7 @@
     <div class="panel toolbar">
       <div>
         <div class="title">依赖状态</div>
-        <div class="desc">检测 MySQL / MinIO / Milvus / Ollama / Etcd 连通性</div>
+        <div class="desc">检测 MySQL / MinIO / Milvus / Embedding / LLM / Etcd 连通性</div>
       </div>
       <div class="actions">
         <el-tag :type="overallTag" size="large">整体: {{ overallText }}</el-tag>
@@ -33,6 +33,7 @@
           </div>
         </el-col>
       </el-row>
+      <div v-if="providerLine" class="checked">当前模型：{{ providerLine }}</div>
       <div v-if="checkedAt" class="checked">最近检测：{{ checkedAt }}</div>
     </div>
   </div>
@@ -46,7 +47,8 @@ const META = {
   mysql: { label: 'MySQL', desc: '文档/会话等业务元数据' },
   minio: { label: 'MinIO', desc: 'Markdown 原文件对象存储' },
   milvus: { label: 'Milvus', desc: '向量检索与分块入库' },
-  ollama: { label: 'Ollama', desc: 'Embedding + LLM 推理' },
+  embedding: { label: 'Embedding', desc: '向量化（Ollama / 百炼 DashScope）' },
+  llm: { label: 'LLM', desc: '问答推理（Ollama / 百炼 DashScope）' },
   etcd: { label: 'Etcd', desc: '动态配置（topK / chunkSize 等）' },
 }
 
@@ -63,6 +65,12 @@ const overallText = computed(() => {
 const overallTag = computed(() => {
   if (!health.value) return 'info'
   return health.value.healthy ? 'success' : 'warning'
+})
+
+const providerLine = computed(() => {
+  const meta = health.value?.meta
+  if (!meta) return ''
+  return `Embedding=${meta.embeddingImpl || meta.embeddingProvider} · LLM=${meta.llmImpl || meta.llmProvider}`
 })
 
 const items = computed(() => {
