@@ -30,6 +30,11 @@
             </div>
             <div class="dep-key">{{ item.key }}</div>
             <div class="dep-desc">{{ item.desc }}</div>
+            <div v-if="item.model" class="dep-model">
+              <span class="dep-model-label">模型</span>
+              <code>{{ item.model }}</code>
+            </div>
+            <div v-if="item.provider" class="dep-provider">提供方：{{ item.provider }}</div>
           </div>
         </el-col>
       </el-row>
@@ -70,19 +75,39 @@ const overallTag = computed(() => {
 const providerLine = computed(() => {
   const meta = health.value?.meta
   if (!meta) return ''
-  return `Embedding=${meta.embeddingImpl || meta.embeddingProvider} · LLM=${meta.llmImpl || meta.llmProvider}`
+  const embed = meta.embeddingModel
+    ? `${meta.embeddingImpl || meta.embeddingProvider}/${meta.embeddingModel}`
+    : (meta.embeddingImpl || meta.embeddingProvider)
+  const llm = meta.llmModel
+    ? `${meta.llmImpl || meta.llmProvider}/${meta.llmModel}`
+    : (meta.llmImpl || meta.llmProvider)
+  return `Embedding=${embed} · LLM=${llm}`
 })
 
 const items = computed(() => {
   const deps = health.value?.dependencies || {}
+  const meta = health.value?.meta || {}
   const keys = Object.keys(META)
   const extra = Object.keys(deps).filter((k) => !keys.includes(k))
-  return [...keys, ...extra].map((key) => ({
-    key,
-    label: META[key]?.label || key,
-    desc: META[key]?.desc || '外部依赖',
-    ok: !!deps[key],
-  }))
+  return [...keys, ...extra].map((key) => {
+    const item = {
+      key,
+      label: META[key]?.label || key,
+      desc: META[key]?.desc || '外部依赖',
+      ok: !!deps[key],
+      model: '',
+      provider: '',
+    }
+    if (key === 'embedding') {
+      item.model = meta.embeddingModel || ''
+      item.provider = meta.embeddingImpl || meta.embeddingProvider || ''
+    }
+    if (key === 'llm') {
+      item.model = meta.llmModel || ''
+      item.provider = meta.llmImpl || meta.llmProvider || ''
+    }
+    return item
+  })
 })
 
 async function load() {
@@ -167,6 +192,32 @@ onUnmounted(() => {
   font-size: 13px;
   color: #4b5563;
   line-height: 1.5;
+}
+.dep-model {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dep-model-label {
+  font-size: 12px;
+  color: #64748b;
+}
+.dep-model code {
+  font-family: Consolas, Monaco, monospace;
+  font-size: 12px;
+  color: #1e3a8a;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 2px 8px;
+  word-break: break-all;
+}
+.dep-provider {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
 }
 .checked {
   margin-top: 4px;

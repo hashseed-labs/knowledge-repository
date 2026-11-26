@@ -107,6 +107,8 @@ async function create() {
 }
 
 function useSpace(row) {
+  // 确保顶栏下拉的 options 与当前列表一致，并用统一数字 ID 触发联动
+  ws.setSpaces(spaces.value)
   ws.setKbId(row.id)
   ElMessage.success(`已切换到知识库：${row.name}`)
 }

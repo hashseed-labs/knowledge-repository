@@ -3,13 +3,15 @@
 USE knowledge_kb;
 
 CREATE TABLE IF NOT EXISTS sys_user (
-    id             BIGINT PRIMARY KEY AUTO_INCREMENT,
-    username       VARCHAR(64)  NOT NULL UNIQUE,
-    password_hash  VARCHAR(255) NOT NULL,
-    display_name   VARCHAR(128) NOT NULL,
-    status         VARCHAR(32)  NOT NULL DEFAULT 'ACTIVE',
-    created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    id                  BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username            VARCHAR(64)  NOT NULL UNIQUE,
+    password_hash       VARCHAR(255) NOT NULL,
+    display_name        VARCHAR(128) NOT NULL,
+    status              VARCHAR(32)  NOT NULL DEFAULT 'ACTIVE',
+    failed_login_count  INT          NOT NULL DEFAULT 0,
+    failed_login_day    DATE         NULL,
+    created_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS sys_tenant (

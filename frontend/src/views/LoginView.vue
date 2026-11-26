@@ -12,7 +12,6 @@
         </el-form-item>
         <el-button type="primary" class="btn" :loading="loading" native-type="submit">登录</el-button>
       </el-form>
-      <div class="tip">默认账号 admin / admin123</div>
     </div>
   </div>
 </template>
@@ -44,7 +43,9 @@ async function onSubmit() {
     const spaces = await listSpaces()
     ws.setSpaces(spaces)
     ElMessage.success('登录成功')
-    router.replace(route.query.redirect || '/health')
+    const fallback = auth.hasPermission('system:health:view') ? '/health' : '/spaces'
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    router.replace(redirect || fallback)
   } finally {
     loading.value = false
   }
